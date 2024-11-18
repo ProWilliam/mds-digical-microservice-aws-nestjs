@@ -1,0 +1,93 @@
+service: MDSDigital-Microservice
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  architecture: arm64
+  stage: production
+  region: ${env:AWS_REGION, 'MDSDigital-Microservice-items-dev'}
+  memorySize: 2048
+  logRetentionInDays: 1
+  timeout: 15
+  environment:
+    DYNAMODB_TABLE: ${env:DYNAMODB_TABLE}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: '*'
+          Resource: 
+            - "arn:aws:dynamodb:${self:provider.region}:${env:AWS_ACCOUNT_ID}:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+package:
+  patterns:
+    - '!dist/'
+    - '!.vscode'
+    - '!**/*.spec.ts'          
+    - '!test/**'               
+    - '!.github/**'             
+    - '!.git/**'                
+    - '!.gitignore'             
+    - '!.env'                   
+    - '!README.md'           
+    - '!jest.config.js'         
+    - '!.eslintrc.js'          
+    - '!.prettierrc' 
+    - '!**/**.spec.ts'         
+    - '!**/*.test.ts'          
+    - 'src/**'                  
+    - 'package.json'            
+    - 'package-lock.json'       
+    - 'tsconfig.json'          
+    - 'tsconfig.build.json'     
+
+functions:
+  add:
+    handler: src/lambda.handler.add.controller.handler
+    events:
+      - httpApi:
+          method: post
+          path: /item
+  auth:
+    handler: src/lambda.handler.auth.controller.handler
+    events:
+      - httpApi:
+          method: post
+          path: /auth/login
+  remove:
+    handler: src/lambda.handler.remove.controller.handler
+    events:
+      - httpApi:
+          method: delete
+          path: /item/{id}
+  retrieve:
+    handler: src/lambda.handler.retrieve.controller.handler
+    events:
+      - httpApi:
+          method: get
+          path: /item/{id}
+  update:
+    handler: src/lambda.handler.update.controller.handler
+    events:
+      - httpApi:
+          method: post
+          path: /item/{id}
+
+resources:
+  Resources:
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+
+plugins: 
+  - serverless-jetpack
+  - serverless-offline
+
